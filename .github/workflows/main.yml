@@ -9,7 +9,7 @@ on:
     branches: [ "main", "dev" ]
 
 jobs:
-  build_and_test:
+  build_and_deploy:
     runs-on: ubuntu-latest
     
     steps:
@@ -34,11 +34,13 @@ jobs:
         pip install bandit
         bandit -r src/
 
-    - name: Construir imagem Docker
-      # Esta etapa constrói a imagem do container, usando o Dockerfile
-      run: docker build -t estufa-inteligente .
-
-    # --- Próximos passos do pipeline ---
-    # Etapa de Deploy Contínuo:
-    # AQUI você adicionaria a lógica para implantar
-    # sua aplicação em um servidor de produção.
+    - name: Login no Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    
+    - name: Construir e Enviar imagem Docker
+      run: |
+        docker build -t cocati/estufa-inteligente:latest .
+        docker push cocati/estufa-inteligente:latest
