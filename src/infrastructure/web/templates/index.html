@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Cultivo</title>
+    <style>
+        body { font-family: sans-serif; margin: 2rem; }
+        .data-display {
+            border: 1px solid #ccc;
+            padding: 1rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+        }
+        .chart-container {
+            width: 80%;
+            margin: 2rem auto;
+            border: 1px solid #eee;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Monitoramento de Cultivo de Shiitake</h1>
+    <div class="data-display">
+        <h2>Dados Ambientais Atuais</h2>
+        <p><strong>Temperatura:</strong> <span id="temp">--</span> °C</p>
+        <p><strong>Umidade:</strong> <span id="umidade">--</span> %</p>
+        <p><strong>Luminosidade:</strong> <span id="luminosidade">--</span> lux</p>
+        <p><strong>CO₂:</strong> <span id="co2">--</span> ppm</p>
+    </div>
+
+    <h2>Médias Diárias</h2>
+    <div class="chart-container">
+        <h3>Temperatura Média Diária (°C)</h3>
+        <canvas id="tempChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Umidade Média Diária (%)</h3>
+        <canvas id="umidadeChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>Luminosidade Média Diária (lux)</h3>
+        <canvas id="luminosidadeChart"></canvas>
+    </div>
+    <div class="chart-container">
+        <h3>CO₂ Médio Diário (ppm)</h3>
+        <canvas id="co2Chart"></canvas>
+    </div>
+
+    <script>
+        // Função auxiliar para formatar números
+        function formatNumber(num) {
+            return parseFloat(num).toFixed(2);
+        }
+
+        // Funções para criar gráficos
+        function createChart(ctx, label, data, borderColor) {
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        borderColor: borderColor,
+                        tension: 0.1,
+                        fill: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+        }
+
+        // Instâncias dos gráficos
+        const tempCtx = document.getElementById('tempChart').getContext('2d');
+        const umidadeCtx = document.getElementById('umidadeChart').getContext('2d');
+        const luminosidadeCtx = document.getElementById('luminosidadeChart').getContext('2d');
+        const co2Ctx = document.getElementById('co2Chart').getContext('2d');
+
+        let tempChart, umidadeChart, luminosidadeChart, co2Chart;
+
+        // Função para buscar dados da API e atualizar a página
+        async function fetchData() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                document.getElementById('temp').innerText = formatNumber(data.temperatura);
+                document.getElementById('umidade').innerText = formatNumber(data.umidade);
+                document.getElementById('luminosidade').innerText = formatNumber(data.luminosidade);
+                document.getElementById('co2').innerText = formatNumber(data.co2);
+            } catch (error) {
+                console.error("Erro ao buscar dados da API:", error);
+            }
+        }
+        
+        // Nova função para buscar e atualizar os gráficos de média diária
+        async function fetchDailyAverageChartData() {
+            try {
+                const response = await fetch('/api/historico/diario');
+                const data = await response.json();
+
+                const labels = data.map(d => d.dia);
+                
+                // Destruir e recriar gráficos se já existirem
+                if (tempChart) tempChart.destroy();
+                if (umidadeChart) umidadeChart.destroy();
+                if (luminosidadeChart) luminosidadeChart.destroy();
+                if (co2Chart) co2Chart.destroy();
+
+                tempChart = createChart(tempCtx, 'Temperatura Média (°C)', data.map(d => d.temperatura), 'rgb(255, 99, 132)');
+                tempChart.data.labels = labels;
+                tempChart.update();
+
+                umidadeChart = createChart(umidadeCtx, 'Umidade Média (%)', data.map(d => d.umidade), 'rgb(54, 162, 235)');
+                umidadeChart.data.labels = labels;
+                umidadeChart.update();
+
+                luminosidadeChart = createChart(luminosidadeCtx, 'Luminosidade Média (lux)', data.map(d => d.luminosidade), 'rgb(255, 205, 86)');
+                luminosidadeChart.data.labels = labels;
+                luminosidadeChart.update();
+
+                co2Chart = createChart(co2Ctx, 'CO₂ Médio (ppm)', data.map(d => d.co2), 'rgb(75, 192, 192)');
+                co2Chart.data.labels = labels;
+                co2Chart.update();
+
+            } catch (error) {
+                console.error("Erro ao buscar dados do histórico diário:", error);
+            }
+        }
+
+        setInterval(fetchData, 5000); // Atualiza a cada 5 segundos
+        setInterval(fetchDailyAverageChartData, 60000); // Atualiza os gráficos a cada 1 minuto
+        
+        fetchData(); // Chamada inicial dos dados atuais
+        fetchDailyAverageChartData(); // Chamada inicial dos gráficos de média diária
+    </script>
+</body>
+</html>
