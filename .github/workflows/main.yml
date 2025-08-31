@@ -25,17 +25,20 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        
+    
     - name: Executar testes de unidade
       run: python -m unittest discover tests
       
     - name: Executar análise de segurança com Bandit
-      # Adicionando a ferramenta de análise de código estático (SAST)
       run: |
         pip install bandit
         bandit -r src/
 
+    - name: Construir imagem Docker
+      # Esta etapa constrói a imagem do container, usando o Dockerfile
+      run: docker build -t estufa-inteligente .
+
     # --- Próximos passos do pipeline ---
     # Etapa de Deploy Contínuo:
-    # AQUI você adicionaria a lógica para construir e implantar
+    # AQUI você adicionaria a lógica para implantar
     # sua aplicação em um servidor de produção.
